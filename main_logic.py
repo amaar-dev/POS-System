@@ -3,7 +3,7 @@ from datetime import datetime
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-DB_FILE = "oilshop.db"
+DB_FILE = "Oil_shop_database.db"
 
 # --------------------------
 # Database helper functions

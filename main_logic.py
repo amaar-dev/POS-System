@@ -8,7 +8,75 @@ DB_FILE = "Oil_shop_database.db"
 # --------------------------
 # Database helper functions
 # --------------------------
+# Load data into the table
+def load_data():
+    for row in tree.get_children():
+        tree.delete(row)
+    for row in get_all_products():
+        tree.insert("", tk.END, values=row)
 
+load_data()
+
+# Handle double-click edit
+def on_double_click(event):
+    item = tree.selection()[0]
+    values = list(tree.item(item, "values"))
+
+    edit_win = tk.Toplevel(root)
+    edit_win.title("Edit Product")
+    edit_win.geometry("300x300")
+
+    fields = ["Name", "Barcode", "Price", "Quantity"]
+    entries = {}
+
+    for i, field in enumerate(fields):
+        tk.Label(edit_win, text=field).pack()
+        e = tk.Entry(edit_win)
+        e.pack()
+        e.insert(0, values[i + 1])
+        entries[field] = e
+
+    def save_changes():
+        try:
+            update_product(
+                values[0],
+                entries["Name"].get(),
+                entries["Barcode"].get(),
+                float(entries["Price"].get()),
+                int(entries["Quantity"].get())
+            )
+            messagebox.showinfo("Success", "Product updated successfully!")
+            edit_win.destroy()
+            load_data()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to update: {e}")
+    tk.Button(edit_win, text="Save", command=save_changes).pack(pady=10)
+
+
+
+
+# Fetch all products and edit stock
+def get_all_products():
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT id, name, barcode, price, quantity FROM products")
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+def update_product(product_id, name, barcode, price, quantity):
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("""
+        UPDATE products
+        SET name=?, barcode=?, price=?, quantity=?
+        WHERE id=?
+    """, (name, barcode, price, quantity, product_id))
+    conn.commit()
+    conn.close()
+
+
+# Establish connection
 def get_connection():
     return sqlite3.connect(DB_FILE)
 
@@ -51,6 +119,9 @@ def get_monthly_sales():
 # --------------------------
 # GUI Setup
 # --------------------------
+
+# Gui cart setup
+
 
 root = tk.Tk()
 root.title("Oil Shop POS System")
@@ -114,6 +185,25 @@ def show_monthly_report():
 
     messagebox.showinfo("Monthly Report", report)
 
+# Gui layout for inventory
+root = tk.Tk()
+root.title("Oil Shop Management System")
+root.geometry("750x450")
+
+tree = ttk.Treeview(root, columns=("ID", "Name", "Barcode", "Price", "Quantity"), show="headings")
+tree.heading("ID", text="ID")
+tree.heading("Name", text="Name")
+tree.heading("Barcode", text="Barcode")
+tree.heading("Price", text="Price")
+tree.heading("Quantity", text="Quantity")
+tree.column("ID", width=40)
+tree.column("Name", width=180)
+tree.column("Barcode", width=150)
+tree.column("Price", width=100)
+tree.column("Quantity", width=80)
+tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+
 # --------------------------
 # UI Layout
 # --------------------------
@@ -141,13 +231,15 @@ lbl_total.pack(pady=5)
 frame_bottom = tk.Frame(root)
 frame_bottom.pack(pady=10)
 
-btn_finish = tk.Button(frame_bottom, text="Finish Sale", bg="green", fg="white", width=15, command=finish_sale)
+btn_finish = tk.Button(frame_bottom, text="Finish Sale", bg="black", fg="white", width=15, command=finish_sale)
 btn_finish.pack(side=tk.LEFT, padx=5)
 
-btn_report = tk.Button(frame_bottom, text="Monthly Report", bg="blue", fg="white", width=15, command=show_monthly_report)
+btn_report = tk.Button(frame_bottom, text="Monthly Report", bg="black", fg="white", width=15, command=show_monthly_report)
 btn_report.pack(side=tk.LEFT, padx=5)
 
-btn_exit = tk.Button(frame_bottom, text="Exit", bg="red", fg="white", width=10, command=root.destroy)
+btn_exit = tk.Button(frame_bottom, text="Exit", bg="black", fg="black", width=10, command=root.destroy)
 btn_exit.pack(side=tk.LEFT, padx=5)
+
+tree.bind("<Double-1>", on_double_click)
 
 root.mainloop()

@@ -5,9 +5,10 @@ from tkinter import ttk, messagebox
 import os
 import tempfile
 import platform
+import tkinter.simpledialog as simpledialog
+import os
 
-
-DB_NAME = "Oil_shop_database.db"
+DB_NAME = os.path.join(os.path.dirname(__file__), "Oil_shop_database.db")
 
 # --------------------------
 # Database helper functions
@@ -74,6 +75,56 @@ def get_monthly_sales():
     data = cur.fetchall()
     conn.close()
     return data
+
+def add_product():
+    add_window = tk.Toplevel(root)
+    add_window.title("Add New Product")
+    add_window.geometry("300x250")
+
+    tk.Label(add_window, text="Product Name").pack()
+    name_entry = tk.Entry(add_window)
+    name_entry.pack()
+
+    tk.Label(add_window, text="Barcode").pack()
+    barcode_entry = tk.Entry(add_window)
+    barcode_entry.pack()
+
+    tk.Label(add_window, text="Price").pack()
+    price_entry = tk.Entry(add_window)
+    price_entry.pack()
+
+    tk.Label(add_window, text="Quantity").pack()
+    quantity_entry = tk.Entry(add_window)
+    quantity_entry.pack()
+
+    def save_product():
+        name = name_entry.get().strip()
+        barcode = barcode_entry.get().strip()
+        price = float(price_entry.get().strip() or 0)
+        quantity = int(quantity_entry.get().strip() or 0)
+
+        if not name or not barcode:
+            messagebox.showerror("Error", "Product name and barcode are required.")
+            return
+
+        # ✅ Always connect to the same database file as the main app
+        db_path = os.path.join(os.path.dirname(__file__), "Oil_shop_database.db")
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+
+        c.execute("""
+            INSERT INTO products (name, barcode, price, quantity)
+            VALUES (?, ?, ?, ?)
+        """, (name, barcode, price, quantity))
+
+        conn.commit()
+        conn.close()
+
+        load_inventory()  # refresh inventory tab
+        add_window.destroy()
+        messagebox.showinfo("Success", "Product added successfully!")
+
+    tk.Button(add_window, text="Save", command=save_product).pack(pady=10)
 
 # --------------------------
 # GUI Setup
@@ -176,7 +227,9 @@ def finish_sale():
         cart.clear()
         total_amount = 0
         lbl_total.config(text="Total: Rs 0.00")
+        global tree
         tree.delete(*tree.get_children())
+
 
     except Exception as e:
         messagebox.showerror("Error", f"Failed to record sale: {e}")
@@ -287,14 +340,19 @@ lbl_total.pack(pady=5)
 frame_bottom = tk.Frame(frame_pos)
 frame_bottom.pack(pady=10)
 
-btn_finish = tk.Button(frame_bottom, text="Finish Sale", bg="black", fg="white", width=15, command=finish_sale)
+btn_finish = tk.Button(frame_bottom, text="Finish Sale", bg="black", fg="silver", width=15, command=finish_sale)
 btn_finish.pack(side=tk.LEFT, padx=5)
 
-btn_report = tk.Button(frame_bottom, text="Monthly Report", bg="black", fg="white", width=15, command=show_monthly_report)
+btn_report = tk.Button(frame_bottom, text="Monthly Report", bg="black", fg="silver", width=15, command=show_monthly_report)
 btn_report.pack(side=tk.LEFT, padx=5)
 
-btn_exit = tk.Button(frame_bottom, text="Exit", bg="black", fg="white", width=10, command=root.destroy)
+btn_add_product = tk.Button(frame_bottom, text="Add Product", bg="black", fg="silver", width=15, command=add_product)
+btn_add_product.pack(side=tk.LEFT, padx=5)
+
+btn_exit = tk.Button(frame_bottom, text="Exit", bg="black", fg="black", width=10, command=root.destroy)
 btn_exit.pack(side=tk.LEFT, padx=5)
+    
+
 
 # --- Inventory Tab ---
 frame_inventory = ttk.Frame(notebook)
